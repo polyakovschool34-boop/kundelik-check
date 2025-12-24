@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KundelikCheck — калькулятор ФО/СОР/СОЧ/СО</title>
+  <style>
+    :root{
+      --bg:#fbfbfb;
+      --grid:#ececec;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --lime:#b8cf2a;
+      --orange:#f59e0b;
+      --danger:#ef4444;
+      --card:#ffffff;
+      --shadow: 0 8px 24px rgba(0,0,0,.08);
+      --radius:12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        linear-gradient(0deg, rgba(255,255,255,.75), rgba(255,255,255,.75)),
+        repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 28px),
+        repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 28px);
+      background-color:var(--bg);
+    }
+    .wrap{
+      max-width:1050px;
+      margin:28px auto;
+      padding:18px 18px 28px;
+    }
+    .top{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      justify-content:center;
+      margin-bottom:18px;
+    }
+    .brand{
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size:40px;
+      line-height:1;
+      user-select:none;
+    }
+    .brand .k{color:#2563eb;}
+    .brand .c{color:#111827;}
+    .tag{
+      font-size:18px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin:14px 0 22px;
+    }
+    .pill{
+      background:var(--card);
+      box-shadow:var(--shadow);
+      border-radius:999px;
+      padding:8px 12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      border:1px solid rgba(0,0,0,.06);
+    }
+    .pill label{font-size:13px;color:var(--muted);}
+    select, input{
+      font-family:inherit;
+      font-size:14px;
+      border:1px solid rgba(0,0,0,.12);
+      border-radius:10px;
+      padding:9px 10px;
+      outline:none;
+      background:#fff;
+    }
+    input[type="number"]{width:92px;}
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:22px 22px;
+      align-items:start;
+    }
+    .col{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:center;
+    }
+    .label{
+      font-size:18px;
+      color:#111827;
+      letter-spacing:.2px;
+      margin-top:6px;
+    }
+    .box{
+      width:220px;
+      border-radius:10px;
+      padding:14px 14px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(0,0,0,.06);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      background:var(--lime);
+      color:#111827;
+    }
+    .box.orange{background: #f5a524;}
+    .box.disabled{opacity:.65;}
+    .box input{
+      width:88px;
+      text-align:center;
+      border:none;
+      background:transparent;
+      font-size:20px;
+      font-weight:800;
+      color:#111827;
+      padding:2px 0;
+      border-radius:8px;
+    }
+    .box input:focus{
+      outline:2px solid rgba(0,0,0,.18);
+      outline-offset:2px;
+      background:rgba(255,255,255,.35);
+    }
+    .slash{
+      font-weight:900;
+      font-size:20px;
+      opacity:.95;
+    }
+    .mid{
+      grid-column: 1 / -1;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      margin-top:10px;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+    .statGroup{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+      width:100%;
+    }
+    .stat{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:center;
+      min-width:260px;
+    }
+    .stat .box{
+      width:240px;
+      padding:12px 14px;
+      justify-content:center;
+    }
+    .stat .box.single input{
+      width:160px;
+    }
+    .centerReadout{
+      width:100%;
+      text-align:center;
+      margin-top:14px;
+      color:#111827;
+      font-size:16px;
+    }
+    .centerReadout .row{margin:8px 0;}
+    .centerReadout .mono{font-family:var(--mono);}
+    .final{
+      display:flex;
+      justify-content:center;
+      margin-top:14px;
+    }
+    .finalBadge{
+      background:var(--danger);
+      color:#fff;
+      font-weight:900;
+      font-size:18px;
+      padding:10px 16px;
+      border-radius:10px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(0,0,0,.08);
+    }
+    .hint{
+      text-align:center;
+      color:var(--muted);
+      font-size:12px;
+      margin-top:14px;
+    }
+    .btns{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin-top:8px;
+      flex-wrap:wrap;
+    }
+    button{
+      border:1px solid rgba(0,0,0,.14);
+      background:#fff;
+      padding:10px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
+      font-weight:700;
+    }
+    button:active{transform:translateY(1px);}
+    @media (max-width: 980px){
+      .grid{grid-template-columns: repeat(2, 1fr);}
+      .box{width:100%;}
+      .col{padding:0 6px;}
+    }
+    @media (max-width: 560px){
+      .grid{grid-template-columns: 1fr;}
+      .stat{min-width:auto; width:100%;}
+      .stat .box{width:100%;}
+      .brand{font-size:34px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand"><span class="k">Кундёлік</span><span class="c">Check</span></div>
+        <div class="tag">Проверь свою успеваемость!</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="pill">
+        <label for="mode">Режим расчёта</label>
+        <select id="mode">
+          <option value="quarter">За четверть (СОР 25% + ФО 25% + СОЧ 50%)</option>
+          <option value="semester">За полугодие (СО 50% + ФО 50%)</option>
+        </select>
+      </div>
+
+      <div class="pill">
+        <label>Пороги (5/4/3)</label>
+        <input id="t5" type="number" min="0" max="100" step="1" value="80" title="Порог для 5" />
+        <input id="t4" type="number" min="0" max="100" step="1" value="60" title="Порог для 4" />
+        <input id="t3" type="number" min="0" max="100" step="1" value="40" title="Порог для 3" />
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- SOR 1..4 -->
+      <div class="col">
+        <div class="label">СОР<sub>1</sub></div>
+        <div class="box orange">
+          <input id="sor1_fact" type="number" min="0" step="1" placeholder="—" />
+          <span class="slash">/</span>
+          <input id="sor1_max" type="number" min="0" step="1" placeholder="—" />
+        </div>
+      </div>
+      <div class="col">
+        <div class="label">СОР<sub>2</sub></div>
+        <div class="box">
+          <input id="sor2_fact" type="number" min="0" step="1" placeholder="—" />
+          <span class="slash">/</span>
+          <input id="sor2_max" type="number" min="0" step="1" placeholder="—" />
+        </div>
+      </div>
+      <div class="col">
+        <div class="label">СОР<sub>3</sub></div>
+        <div class="box">
+          <input id="sor3_fact" type="number" min="0" step="1" placeholder="—" />
+          <span class="slash">/</span>
+          <input id="sor3_max" type="number" min="0" step="1" placeholder="—" />
+        </div>
+      </div>
+      <div class="col">
+        <div class="label">СОР<sub>4</sub></div>
+        <div class="box">
+          <input id="sor4_fact" type="number" min="0" step="1" placeholder="—" />
+          <span class="slash">/</span>
+          <input id="sor4_max" type="number" min="0" step="1" placeholder="—" />
+        </div>
+      </div>
+
+      <div class="mid">
+        <div class="statGroup">
+          <div class="stat">
+            <div class="label">Сумма ФО</div>
+            <div class="box single">
+              <input id="fo_sum" type="number" min="0" step="1" placeholder="—" />
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="label">Кол-во ФО</div>
+            <div class="box single">
+              <input id="fo_cnt" type="number" min="0" step="1" placeholder="—" />
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="label" id="rightLabel">СОЧ</div>
+            <div class="box single" id="rightBox">
+              <input id="soch_fact" type="number" min="0" step="1" placeholder="—" />
+              <span class="slash">/</span>
+              <input id="soch_max" type="number" min="0" step="1" placeholder="—" />
+            </div>
+          </div>
+        </div>
+
+        <div class="centerReadout" aria-live="polite">
+          <div class="row">
+            <span id="p1Label">За 1 ОП</span>:
+            <span class="mono" id="p_op">—</span>
+            &nbsp;&nbsp;&nbsp;
+            <span id="p2Label">% СОЧ</span>:
+            <span class="mono" id="p_soch">—</span>
+          </div>
+          <div class="row">
+            <span class="mono">% Сумма:</span>
+            <span class="mono" id="p_total">—</span>
+          </div>
+        </div>
+
+        <div class="final">
+          <div class="finalBadge" id="finalBadge">Оценка: —</div>
+        </div>
+
+        <div class="btns">
+          <button id="fillDemo">Заполнить пример</button>
+          <button id="clearAll">Очистить</button>
+        </div>
+
+        <div class="hint">
+          Вводите баллы как в Kundelik: СОР/СОЧ/СО — «факт/макс», ФО — «сумма» и «кол-во» (каждая ФО из 10).
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const el = (id) => document.getElementById(id);
+
+  const ids = [
+    "sor1_fact","sor1_max","sor2_fact","sor2_max","sor3_fact","sor3_max","sor4_fact","sor4_max",
+    "fo_sum","fo_cnt",
+    "soch_fact","soch_max",
+    "t5","t4","t3","mode"
+  ];
+
+  function num(v){
+    if (v === "" || v === null || v === undefined) return null;
+    const x = Number(v);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  function clamp01(x){
+    if (!Number.isFinite(x)) return 0;
+    return Math.max(0, Math.min(1, x));
+  }
+
+  function percent(x){ // x in [0..100] or null
+    return (x === null) ? "—" : (x.toFixed(1) + "%");
+  }
+
+  function gradeFromPercent(p, t5, t4, t3){
+    if (!Number.isFinite(p)) return "—";
+    if (p >= t5) return "5";
+    if (p >= t4) return "4";
+    if (p >= t3) return "3";
+    return "2";
+  }
+
+  function readInputs(){
+    const mode = el("mode").value;
+
+    // thresholds
+    let t5 = num(el("t5").value); let t4 = num(el("t4").value); let t3 = num(el("t3").value);
+    t5 = (t5 ?? 80); t4 = (t4 ?? 60); t3 = (t3 ?? 40);
+
+    // FO
+    const foSum = num(el("fo_sum").value);
+    const foCnt = num(el("fo_cnt").value);
+
+    // SOR
+    const sor = [];
+    for (let i=1;i<=4;i++){
+      sor.push({
+        fact: num(el(`sor${i}_fact`).value),
+        max:  num(el(`sor${i}_max`).value),
+      });
+    }
+
+    // SOCH
+    const sochFact = num(el("soch_fact").value);
+    const sochMax  = num(el("soch_max").value);
+
+    return {mode, t5, t4, t3, foSum, foCnt, sor, sochFact, sochMax};
+  }
+
+  function calc(){
+    const {mode, t5, t4, t3, foSum, foCnt, sor, sochFact, sochMax} = readInputs();
+
+    // FO share
+    const foShare = (foSum !== null && foCnt !== null && foCnt > 0)
+      ? clamp01( foSum / (foCnt * 10) )
+      : null;
+
+    // SOR share (sum of fact / sum of max) using only filled pairs, but safer: sum separately ignoring nulls
+    let sorFactSum = 0, sorMaxSum = 0;
+    for (const s of sor){
+      if (s.fact !== null) sorFactSum += Math.max(0, s.fact);
+      if (s.max  !== null) sorMaxSum  += Math.max(0, s.max);
+    }
+    const sorShare = (sorMaxSum > 0) ? clamp01(sorFactSum / sorMaxSum) : null;
+
+    // SOCH share
+    const sochShare = (sochFact !== null && sochMax !== null && sochMax > 0)
+      ? clamp01( Math.max(0, sochFact) / Math.max(0, sochMax) )
+      : null;
+
+    // For semester mode we use СО (sum fact/max) in the same fields as "СОЧ" block (to keep UI simple),
+    // but we relabel it as "СО".
+    const soShare = sochShare; // same inputs, different meaning
+
+    let pOp = null, pRight = null, total = null, gradeLabel = "";
+
+    if (mode === "quarter"){
+      // quarter formula:
+      // = (SОР fact/max)*25 + (FO sum/(cnt*10))*25 + (SOCH fact/max)*50
+      const partSor = (sorShare === null) ? null : sorShare * 25;
+      const partFo  = (foShare  === null) ? null : foShare  * 25;
+      const partSoch= (sochShare=== null) ? null : sochShare* 50;
+
+      // For display like screenshot:
+      // "За 1 ОП" -> partSor + partFo (as percent)
+      pOp = (partSor === null && partFo === null) ? null : ( (partSor ?? 0) + (partFo ?? 0) );
+      pRight = (partSoch === null) ? null : partSoch;
+
+      total = (pOp === null && pRight === null) ? null : ( (pOp ?? 0) + (pRight ?? 0) );
+
+      gradeLabel = `Оценка за четверть: ${gradeFromPercent(total ?? NaN, t5, t4, t3)}`;
+      el("p1Label").textContent = "За 1 ОП";
+      el("p2Label").textContent = "% СОЧ";
+      el("rightLabel").textContent = "СОЧ";
+
+    } else {
+      // semester formula:
+      // = (SO fact/max)*50 + (FO sum/(cnt*10))*50
+      const partSo = (soShare === null) ? null : soShare * 50;
+      const partFo = (foShare === null) ? null : foShare * 50;
+
+      pOp = (partSo === null) ? null : partSo;       // show as main component (СО)
+      pRight = (partFo === null) ? null : partFo;     // show as second component (ФО)
+
+      total = (pOp === null && pRight === null) ? null : ( (pOp ?? 0) + (pRight ?? 0) );
+
+      gradeLabel = `Оценка за полугодие: ${gradeFromPercent(total ?? NaN, t5, t4, t3)}`;
+      el("p1Label").textContent = "% СО";
+      el("p2Label").textContent = "% ФО";
+      el("rightLabel").textContent = "СО (за полугодие)";
+    }
+
+    // Update UI
+    el("p_op").textContent = percent(pOp);
+    el("p_soch").textContent = percent(pRight);
+    el("p_total").textContent = percent(total);
+
+    const badge = el("finalBadge");
+    badge.textContent = gradeLabel;
+
+    // Slightly dim blocks irrelevant in semester mode
+    const isSemester = (mode === "semester");
+    for (let i=1;i<=4;i++){
+      const box = el(`sor${i}_fact`).closest(".box");
+      box.classList.toggle("disabled", isSemester);
+    }
+    // In semester mode SOCH block reused as СО, keep enabled.
+  }
+
+  function bind(){
+    for (const id of ids){
+      const node = el(id);
+      node.addEventListener("input", calc);
+      node.addEventListener("change", calc);
+    }
+
+    el("clearAll").addEventListener("click", () => {
+      const toClear = [
+        "sor1_fact","sor1_max","sor2_fact","sor2_max","sor3_fact","sor3_max","sor4_fact","sor4_max",
+        "fo_sum","fo_cnt","soch_fact","soch_max"
+      ];
+      for (const id of toClear) el(id).value = "";
+      calc();
+    });
+
+    el("fillDemo").addEventListener("click", () => {
+      // пример как на скрине: СОР1=4/10, ФО сумма 34, кол-во 4
+      el("mode").value = "quarter";
+      el("sor1_fact").value = 4;
+      el("sor1_max").value = 10;
+
+      el("sor2_fact").value = "";
+      el("sor2_max").value = "";
+      el("sor3_fact").value = "";
+      el("sor3_max").value = "";
+      el("sor4_fact").value = "";
+      el("sor4_max").value = "";
+
+      el("fo_sum").value = 34;
+      el("fo_cnt").value = 4;
+
+      el("soch_fact").value = "";
+      el("soch_max").value = "";
+      calc();
+    });
+
+    calc();
+  }
+
+  bind();
+</script>
+</body>
+</html>
