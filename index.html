@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>KundelikCheck — калькулятор ФО/СОР/СОЧ/СО</title>
+  <title>KundelikCheck — калькулятор ФО/СОР/СОЧ</title>
   <style>
     :root{
       --bg:#fbfbfb;
@@ -245,7 +245,7 @@
         <label for="mode">Режим расчёта</label>
         <select id="mode">
           <option value="quarter">За четверть (СОР 25% + ФО 25% + СОЧ 50%)</option>
-          <option value="semester">За полугодие (СО 50% + ФО 50%)</option>
+          <option value="semester">За полугодие (СОР 50% + ФО 50%)</option>
         </select>
       </div>
 
@@ -324,7 +324,7 @@
             <span class="mono" id="p_op">—</span>
             &nbsp;&nbsp;&nbsp;
             <span id="p2Label">% СОЧ</span>:
-            <span class="mono" id="p_soch">—</span>
+            <span class="mono" id="p_right">—</span>
           </div>
           <div class="row">
             <span class="mono">% Сумма:</span>
@@ -342,7 +342,8 @@
         </div>
 
         <div class="hint">
-          Вводите баллы как в Kundelik: СОР/СОЧ/СО — «факт/макс», ФО — «сумма» и «кол-во» (каждая ФО из 10).
+          Вводите баллы: СОР/СОЧ — «факт/макс», ФО — «сумма» и «кол-во» (каждая ФО из 10).
+          В режиме «Полугодие» СОЧ не используется.
         </div>
       </div>
     </div>
@@ -369,7 +370,7 @@
     return Math.max(0, Math.min(1, x));
   }
 
-  function percent(x){ // x in [0..100] or null
+  function percent(x){
     return (x === null) ? "—" : (x.toFixed(1) + "%");
   }
 
@@ -384,15 +385,12 @@
   function readInputs(){
     const mode = el("mode").value;
 
-    // thresholds
     let t5 = num(el("t5").value); let t4 = num(el("t4").value); let t3 = num(el("t3").value);
     t5 = (t5 ?? 80); t4 = (t4 ?? 60); t3 = (t3 ?? 40);
 
-    // FO
     const foSum = num(el("fo_sum").value);
     const foCnt = num(el("fo_cnt").value);
 
-    // SOR
     const sor = [];
     for (let i=1;i<=4;i++){
       sor.push({
@@ -401,7 +399,6 @@
       });
     }
 
-    // SOCH
     const sochFact = num(el("soch_fact").value);
     const sochMax  = num(el("soch_max").value);
 
@@ -416,7 +413,7 @@
       ? clamp01( foSum / (foCnt * 10) )
       : null;
 
-    // SOR share (sum of fact / sum of max) using only filled pairs, but safer: sum separately ignoring nulls
+    // SOR share
     let sorFactSum = 0, sorMaxSum = 0;
     for (const s of sor){
       if (s.fact !== null) sorFactSum += Math.max(0, s.fact);
@@ -424,26 +421,26 @@
     }
     const sorShare = (sorMaxSum > 0) ? clamp01(sorFactSum / sorMaxSum) : null;
 
-    // SOCH share
+    // SOCH share (only for quarter mode)
     const sochShare = (sochFact !== null && sochMax !== null && sochMax > 0)
       ? clamp01( Math.max(0, sochFact) / Math.max(0, sochMax) )
       : null;
 
-    // For semester mode we use СО (sum fact/max) in the same fields as "СОЧ" block (to keep UI simple),
-    // but we relabel it as "СО".
-    const soShare = sochShare; // same inputs, different meaning
-
     let pOp = null, pRight = null, total = null, gradeLabel = "";
 
+    const isSemester = (mode === "semester");
+
+    // Hide SOCH inputs in semester mode
+    el("rightBox").style.visibility = isSemester ? "hidden" : "visible";
+    el("rightLabel").style.visibility = isSemester ? "hidden" : "visible";
+
     if (mode === "quarter"){
-      // quarter formula:
+      // quarter:
       // = (SОР fact/max)*25 + (FO sum/(cnt*10))*25 + (SOCH fact/max)*50
       const partSor = (sorShare === null) ? null : sorShare * 25;
       const partFo  = (foShare  === null) ? null : foShare  * 25;
       const partSoch= (sochShare=== null) ? null : sochShare* 50;
 
-      // For display like screenshot:
-      // "За 1 ОП" -> partSor + partFo (as percent)
       pOp = (partSor === null && partFo === null) ? null : ( (partSor ?? 0) + (partFo ?? 0) );
       pRight = (partSoch === null) ? null : partSoch;
 
@@ -452,40 +449,34 @@
       gradeLabel = `Оценка за четверть: ${gradeFromPercent(total ?? NaN, t5, t4, t3)}`;
       el("p1Label").textContent = "За 1 ОП";
       el("p2Label").textContent = "% СОЧ";
-      el("rightLabel").textContent = "СОЧ";
+      el("p_right").textContent = percent(pRight);
 
     } else {
-      // semester formula:
-      // = (SO fact/max)*50 + (FO sum/(cnt*10))*50
-      const partSo = (soShare === null) ? null : soShare * 50;
-      const partFo = (foShare === null) ? null : foShare * 50;
+      // semester (NO СО):
+      // = (SОР fact/max)*50 + (FO sum/(cnt*10))*50
+      const partSor = (sorShare === null) ? null : sorShare * 50;
+      const partFo  = (foShare  === null) ? null : foShare  * 50;
 
-      pOp = (partSo === null) ? null : partSo;       // show as main component (СО)
-      pRight = (partFo === null) ? null : partFo;     // show as second component (ФО)
+      pOp = partSor;     // % СОР
+      pRight = partFo;   // % ФО
 
       total = (pOp === null && pRight === null) ? null : ( (pOp ?? 0) + (pRight ?? 0) );
 
       gradeLabel = `Оценка за полугодие: ${gradeFromPercent(total ?? NaN, t5, t4, t3)}`;
-      el("p1Label").textContent = "% СО";
+      el("p1Label").textContent = "% СОР";
       el("p2Label").textContent = "% ФО";
-      el("rightLabel").textContent = "СО (за полугодие)";
+      el("p_right").textContent = percent(pRight);
     }
 
-    // Update UI
     el("p_op").textContent = percent(pOp);
-    el("p_soch").textContent = percent(pRight);
     el("p_total").textContent = percent(total);
+    el("finalBadge").textContent = gradeLabel;
 
-    const badge = el("finalBadge");
-    badge.textContent = gradeLabel;
-
-    // Slightly dim blocks irrelevant in semester mode
-    const isSemester = (mode === "semester");
+    // Dim SOR blocks slightly in semester mode? (keep active but show different context)
     for (let i=1;i<=4;i++){
       const box = el(`sor${i}_fact`).closest(".box");
-      box.classList.toggle("disabled", isSemester);
+      box.classList.toggle("disabled", false);
     }
-    // In semester mode SOCH block reused as СО, keep enabled.
   }
 
   function bind(){
@@ -505,7 +496,7 @@
     });
 
     el("fillDemo").addEventListener("click", () => {
-      // пример как на скрине: СОР1=4/10, ФО сумма 34, кол-во 4
+      // Demo like screenshot: SOR1=4/10, FO sum 34, count 4, no SOCH
       el("mode").value = "quarter";
       el("sor1_fact").value = 4;
       el("sor1_max").value = 10;
